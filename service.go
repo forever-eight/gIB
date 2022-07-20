@@ -1,13 +1,28 @@
 package main
 
-import "log"
+import (
+	"log"
+	"sync"
+	"time"
+)
 
 type Service struct {
-	// todo потокозащищенная map
-	queue map[string]*Queue
+	mu     *sync.Mutex
+	queue  map[string]*Queue
+	waiter map[string]int
+	c      chan string
 }
 
 func (s *Service) Add(name string, value string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	// waiter
+	_, ok := s.waiter[name]
+	if ok {
+		s.c <- value
+		s.waiter[name]--
+	}
+
 	node, ok := s.queue[name]
 	// если очередь пустая - просто добавляем
 	if !ok {
@@ -18,7 +33,6 @@ func (s *Service) Add(name string, value string) {
 			},
 			Last: nil,
 		}
-		log.Println(s.queue[name].First, s.queue[name].Last)
 		return
 		// если не пустая - добавляем к последнему
 	}
@@ -36,7 +50,7 @@ func (s *Service) Add(name string, value string) {
 				},
 				Last: last,
 			}
-			log.Println(s.queue[name].First, s.queue[name].First.Next, s.queue[name].Last)
+			//log.Println(s.queue[name].First, s.queue[name].First.Next, s.queue[name].Last)
 			return
 		}
 		// если элементов больше
@@ -48,10 +62,11 @@ func (s *Service) Add(name string, value string) {
 		}
 
 	}
-	log.Println(s.queue[name].First, s.queue[name].First.Next, s.queue[name].Last)
 }
 
 func (s *Service) Get(name string) *string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	node, ok := s.queue[name]
 	if !ok {
 		return nil
@@ -77,5 +92,22 @@ func (s *Service) Get(name string) *string {
 			}
 		}
 		return &cur
+	}
+}
+
+func (s *Service) Wait(n int, name string) *string {
+	timeout := time.After(time.Duration(n) * time.Second)
+	value := s.Get(name)
+	if value != nil {
+		return value
+	}
+
+	s.waiter[name]++
+	select {
+	case value := <-s.c:
+		return &value
+	case <-timeout:
+		log.Println("end", n)
+		return nil
 	}
 }

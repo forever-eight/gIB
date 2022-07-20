@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"sync"
 )
 
 type Node struct {
@@ -19,7 +20,16 @@ type Queue struct {
 
 func main() {
 	queue := make(map[string]*Queue)
-	s := &Service{queue: queue}
+	waiter := make(map[string]int)
+	mu := &sync.Mutex{}
+	c := make(chan string)
+
+	s := &Service{
+		queue:  queue,
+		mu:     mu,
+		waiter: waiter,
+		c:      c,
+	}
 	e := &Endpoint{Service: s}
 
 	err := e.Start()
