@@ -3,11 +3,9 @@ package main
 import "log"
 
 type Service struct {
+	// todo потокозащищенная map
 	queue map[string]*Queue
 }
-
-// берем по нашему значению, проверяем ok или нет, если не ok - удаляем. Далее будем потокозащищенную мапку использовать.
-// храним самый старый узел, если next == nil-закрываем, если нет, то он становится главным node
 
 func (s *Service) Add(name string, value string) {
 	node, ok := s.queue[name]
@@ -42,17 +40,42 @@ func (s *Service) Add(name string, value string) {
 			return
 		}
 		// если элементов больше
-		next := &Node{
-			Current: value,
-			Next:    nil,
-		}
 		// теперь последний указывает на новый элемент
-		s.queue[name].Last.Next = next
+		s.queue[name].Last.Next = last
 		s.queue[name] = &Queue{
 			First: node.First,
-			Last:  next,
+			Last:  last,
 		}
 
 	}
 	log.Println(s.queue[name].First, s.queue[name].First.Next, s.queue[name].Last)
+}
+
+func (s *Service) Get(name string) *string {
+	node, ok := s.queue[name]
+	if !ok {
+		return nil
+	} else {
+		cur := node.First.Current
+		// если один элемент
+		if node.First.Next == nil {
+			delete(s.queue, name)
+			return &cur
+		} else if node.First.Next == node.Last {
+			// если элементов два
+			s.queue[name] = &Queue{
+				First: node.Last,
+				Last:  nil,
+			}
+			return &cur
+		} else {
+			// если элементов больше
+			next := node.First.Next
+			s.queue[name] = &Queue{
+				First: next,
+				Last:  node.Last,
+			}
+		}
+		return &cur
+	}
 }
