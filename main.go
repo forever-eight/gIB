@@ -18,6 +18,7 @@ type Queue struct {
 	Last *Node
 }
 
+// невозможно положить после запроса с wait ничего
 func main() {
 	queue := make(map[string]*Queue)
 	waiter := make(map[string]int)
