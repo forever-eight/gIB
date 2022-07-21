@@ -77,8 +77,8 @@ func (s *Service) Add(name string, value string) {
 }
 
 func (s *Service) Get(name string) *string {
-	s.mu.Lock()
 
+	s.mu.Lock()
 	node, ok := s.queue[name]
 	s.mu.Unlock()
 	if !ok {
@@ -86,12 +86,10 @@ func (s *Service) Get(name string) *string {
 	} else {
 		cur := node.First.Current
 		// если один элемент
-
 		if node.First.Next == nil {
 			s.mu.Lock()
 			delete(s.queue, name)
 			s.mu.Unlock()
-			return &cur
 		} else if node.First.Next == node.Last {
 			s.mu.Lock()
 			// если элементов два
@@ -100,11 +98,10 @@ func (s *Service) Get(name string) *string {
 				Last:  nil,
 			}
 			s.mu.Unlock()
-			return &cur
 		} else {
 			// если элементов больше
-			s.mu.Lock()
 			next := node.First.Next
+			s.mu.Lock()
 			s.queue[name] = &Queue{
 				First: next,
 				Last:  node.Last,
@@ -113,6 +110,7 @@ func (s *Service) Get(name string) *string {
 		}
 		return &cur
 	}
+
 }
 
 func (s *Service) Wait(n int, name string) *string {
