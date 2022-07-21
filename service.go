@@ -124,8 +124,8 @@ func (s *Service) Wait(n int, name string) *string {
 	s.waiter[name]++
 	s.mu.Unlock()
 	select {
-	case value := <-s.c:
-		return &value
+	case value = <-s.c:
+		return value
 	case <-timeout:
 		log.Println("end", n)
 		return nil
